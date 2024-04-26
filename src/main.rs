@@ -1,10 +1,10 @@
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(version, about, name = "cli")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    cmd: Commands,
 }
 
 #[derive(Debug, Parser)]
