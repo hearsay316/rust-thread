@@ -1,6 +1,9 @@
+use clap::builder::TypedValueParser;
 use clap::Parser;
-use std::env;
+use csv::Reader;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::{env, fs};
 
 #[derive(Parser, Debug)]
 #[command(version, about, name = "cli")]
@@ -39,10 +42,46 @@ fn verify_file_exists(file_name: &str) -> Result<String, &'static str> {
         Err("没有文件")
     }
 }
-fn main() {
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct Player {
+    #[serde(rename = "Name")]
+    name: String,
+    #[serde(rename = "Position")]
+    position: String,
+    #[serde(rename = "DOB")]
+    dob: String,
+    #[serde(rename = "Nationality")]
+    nationality: String,
+    #[serde(rename = "Kit Number")]
+    kit: u8,
+}
+fn main() -> anyhow::Result<()> {
     let opts = Cli::parse();
-
-    println!("{:?}", opts)
+    println!("{:?}", opts);
+    match opts.cmd {
+        Commands::Csv(csv_opts) => {
+            let mut reader = Reader::from_path(csv_opts.input)?;
+            let mut records = Vec::with_capacity(128);
+            for record in reader.deserialize() {
+                let record: Player = record?;
+                records.push(record);
+            }
+            let json = serde_json::to_string_pretty(&records)?;
+            fs::write(csv_opts.output, json)?;
+            // let records = reader
+            //     .deserialize()
+            //     .map(|result| result.unwrap())
+            //     .collect::<Vec<Player>>();
+            // let headers = reader.headers().unwrap().clone();
+            // let mut records = Vec::new();
+            // for record in reader.records() {
+            //     records.push(record.unwrap());
+            // }
+            println!("{:?}", records.len());
+            Ok(())
+        }
+    }
 
     // Continued program logic goes here...
 }
