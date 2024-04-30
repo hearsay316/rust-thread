@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use csv::Reader;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -18,12 +20,20 @@ pub struct Player {
 }
 pub fn process_csv(input: &str, output: &str) -> anyhow::Result<()> {
     let mut reader = Reader::from_path(input)?;
-    let mut records = Vec::with_capacity(128);
-    for record in reader.deserialize() {
-        let record: Player = record?;
-        records.push(record);
+    let mut ret = Vec::with_capacity(128);
+    let headers = reader.headers()?.clone();
+    for record in reader.records() {
+        let record = record?;
+        let mut json_value = HashMap::new();
+        for i in 0..headers.len() {
+            json_value.insert(headers[i].to_string(), record[i].to_string());
+        }
+        // let json_value = headers.iter().zip(record.iter()).collect::<Value>();
+        ret.push(json_value);
+        // println!("{:?}", map);
     }
-    let json = serde_json::to_string_pretty(&records)?;
+    // println!("{:?}", ret);
+    let json = serde_json::to_string_pretty(&ret)?;
     fs::write(output, json)?;
     // let records = reader
     //     .deserialize()
@@ -34,6 +44,6 @@ pub fn process_csv(input: &str, output: &str) -> anyhow::Result<()> {
     // for record in reader.records() {
     //     records.push(record.unwrap());
     // }
-    println!("{:?}", records.len());
+    // println!("{:?}", records.len());
     Ok(())
 }
