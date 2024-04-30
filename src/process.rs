@@ -34,6 +34,7 @@ pub fn process_csv(input: &str, output: &str) -> anyhow::Result<()> {
     }
     // println!("{:?}", ret);
     let json = serde_json::to_string_pretty(&ret)?;
+    println!("{}", json);
     fs::write(output, json)?;
     // let records = reader
     //     .deserialize()
