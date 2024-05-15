@@ -49,16 +49,16 @@ fn producer(i: usize, tx: mpsc::Sender<Msg>) -> Result<()> {
     loop {
         // new 一个随机数
         let value = rand::random::<usize>();
+        // 线程延迟时间也是随机
         let sleep_time = rand::random::<u8>() as u64 * 10;
         // 发送这个值
         tx.send(Msg::new(i, value, sleep_time))?;
-
-        //  线程 睡 1000秒毫秒 as _  rust 中必须显示转换 as _ 默认转换
-        thread::sleep(Duration::from_millis(sleep_time));
         if rand::random::<u8>() % 5 == 0 {
             println!("线程 {} 退出",i);
             break;
         }
+        //  线程 延迟 as _  rust 中必须显示转换 as _ 默认转换
+        thread::sleep(Duration::from_millis(sleep_time));
     }
     Ok(())
 }
