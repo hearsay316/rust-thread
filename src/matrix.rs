@@ -41,16 +41,16 @@ impl<T> Debug for Matrix<T>
     }
 }
 
-pub fn dot_product<T>(a: Vector<T>, b: Vector<T>) -> Result<Vec<T>>
+pub fn dot_product<T>(a: Vector<T>, b: Vector<T>) -> Result<T>
     where T: Debug + Default + Copy + Add<Output=T> + AddAssign + Mul<Output=T>, {
     if a.len() != b.len() {
         return Err(anyhow!("error"));
     }
-    let mut c = vec![T::default(); a.len()];
+    let mut sum = T::default();
     for i in 0..a.len() {
-        c[i] = a[i] * b[i];
+        sum += a[i] * b[i];
     }
-    Ok(c)
+    Ok(sum)
 }
 
 // where 关键字 对泛型做条件限制
@@ -63,9 +63,10 @@ pub fn multiply<T>(a: &Matrix<T>, b: &Matrix<T>) -> Result<Matrix<T>>
 
     for i in 0..a.row {
         for j in 0..b.col {
-            for k in 0..a.col {
-                data[i * b.col + j] += a.data[i * a.col + k] * b.data[k * b.col + j];
-            }
+                let row = Vector::new(&a.data[i * a.col..(i+1) * a.col]);
+                let col_data = b.data[j..].iter().step_by(b.col).copied().collect::<Vec<_>>();
+                let col = Vector::new(col_data);
+                data[i * b.col + j] += dot_product(row, col)?;
         }
     }
     Ok(Matrix {

@@ -1,5 +1,5 @@
 
-use std::ops::{Deref, Index};
+use std::ops::{Deref};
 
 pub struct Vector<T> {
     data:Vec<T>
