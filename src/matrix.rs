@@ -1,16 +1,29 @@
-use std::fmt;
+use std::{fmt, thread};
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Mul};
+use std::sync::mpsc;
 use anyhow::{Result, anyhow};
 use crate::Vector;
 
-
+const NUM_THREADS: usize = 4;
 pub struct Matrix<T: Debug> {
     data: Vec<T>,
     row: usize,
     col: usize,
 }
-
+ pub struct MsgInput<T>{
+     idx:usize,
+     row:Vector<T>,
+     col:Vector<T>,
+ }
+pub struct MsgOutput<T>{
+    idx:usize,
+    value:T
+}
+pub struct Msg <T> {
+    input: MsgInput<T>,
+    sender: oneshot::Sender<MsgOutput<T>>
+}
 impl<T: Debug> Matrix<T> {
     pub fn new(data: impl Into<Vec<T>>, row: usize, col: usize) -> Self {
         Self {
@@ -59,6 +72,13 @@ pub fn multiply<T>(a: &Matrix<T>, b: &Matrix<T>) -> Result<Matrix<T>>
     if a.col == b.row {
         return Err(anyhow!("error"));
     }
+   let senders = (0..NUM_THREADS).map(|_| {
+       let (tx,rx) = mpsc::channel();
+       thread::spawn(move |x| {
+
+       })
+   });
+
     let mut data = vec![T::default(); a.row * b.col];
 
     for i in 0..a.row {
