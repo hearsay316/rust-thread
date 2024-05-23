@@ -48,6 +48,12 @@ impl<T> Msg<T> {
     }
 }
 
+impl <T> Mul for Matrix<T>  where T: Debug + Default + Copy + Add<Output=T> + AddAssign + Mul<Output=T> + Send + 'static,  {
+    type Output  = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        multiply(&self, &rhs).expect("matrix multiply failed这个是出错啦")
+    }
+}
 impl<T: Debug> Matrix<T> {
     pub fn new(data: impl Into<Vec<T>>, row: usize, col: usize) -> Self {
         Self {
@@ -93,9 +99,11 @@ pub fn dot_product<T>(a: Vector<T>, b: Vector<T>) -> Result<T>
 // where 关键字 对泛型做条件限制
 pub fn multiply<T>(a: &Matrix<T>, b: &Matrix<T>) -> Result<Matrix<T>>
     where T: Debug + Default + Copy + Add<Output=T> + AddAssign + Mul<Output=T> + Send + 'static, {
-    if a.col == b.row {
+    if a.col != b.row {
+        println!("error");
         return Err(anyhow!("error"));
     }
+    // 接受数据
     let senders = (0..NUM_THREADS).map(|_| {
         let (tx, rx) = mpsc::channel::<Msg<T>>();
         thread::spawn(move || {
@@ -119,6 +127,7 @@ pub fn multiply<T>(a: &Matrix<T>, b: &Matrix<T>) -> Result<Matrix<T>>
             let col = Vector::new(col_data);
             let idx = i * b.col + j;
             let input = MsgInput::new(idx, row, col);
+            //  发送数据
             let (tx, rx) = oneshot::channel();
             let msg = Msg::new(input, tx);
             if let Err(e) = senders[idx % NUM_THREADS].send(msg) {
@@ -129,6 +138,7 @@ pub fn multiply<T>(a: &Matrix<T>, b: &Matrix<T>) -> Result<Matrix<T>>
             receivers.push(rx);
         }
     }
+    // 回写数据
     for rx in receivers {
         let ret = rx.recv()?;
         data[ret.idx] = ret.value;
@@ -147,8 +157,8 @@ mod tests {
     #[test]
     fn test_multiply() -> Result<()> {
         let a = Matrix::new(vec![1, 2, 3, 4, 5, 6], 2, 3);
-        let b = Matrix::new(vec![7, 8, 9, 10, 11, 12], 1, 2);
-        let c = multiply(&a, &b)?;
+        let b = Matrix::new(vec![7, 8, 9, 10, 11, 12], 3, 2);
+        let c = a * b;
         println!("{:?}", c);
         Ok(())
     }
@@ -160,5 +170,19 @@ mod tests {
         let c = dot_product(a, b);
         println!("{:?}", c.unwrap());
         Ok(())
+    }
+    #[test]
+    fn test_a_can_not_multiply_b()  {
+        let a = Matrix::new(vec![1, 2, 3, 4, 5, 6], 2, 3);
+        let b = Matrix::new(vec![1, 2, 3, 4], 3, 2);
+        let c = multiply(&a, &b);
+      assert!(c.is_err());
+    }
+    #[test]
+    #[should_panic]
+    fn test_a_can_not_multiply_b_panic(){
+        let a = Matrix::new(vec![1, 2, 3, 4, 5, 6], 2, 3);
+        let b = Matrix::new(vec![1, 2, 3, 4], 2, 3);
+        let _c = a*b;
     }
 }
